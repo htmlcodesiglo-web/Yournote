@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<!-- saved from url=(0067)https://pub-ac397c96ae2647d4a45221e91f4ce5dd.r2.dev/duQi0AcJ9h.html -->
+<html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Yournote - Vie scolaire</title>
+<style>
+body { font-family: Arial; background:#f0f2f5; margin:0; }
+.login, .signup { display:flex; justify-content:center; align-items:center; height:100vh; }
+.box { background:#fff; padding:30px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.2); width:300px; text-align:center; }
+input, select, textarea { width:100%; padding:10px; margin:10px 0; border-radius:5px; border:1px solid #ccc; }
+button { padding:10px 15px; width:100%; border:none; border-radius:5px; background:#008655; color:#fff; cursor:pointer; }
+button:hover { background:#006a44; }
+.main { padding:20px; }
+.card { background:#fff; padding:15px; border-radius:10px; box-shadow:0 0 5px rgba(0,0,0,0.1); margin-bottom:20px; }
+.user-item { border-bottom:1px solid #ccc; padding:5px 0; display:flex; justify-content:space-between; align-items:center; }
+.user-item button { width:auto; padding:5px 10px; margin-left:5px; }
+table { width:100%; border-collapse: collapse; margin-top:10px; }
+td, th { border:1px solid #ccc; padding:5px; text-align:center; }
+</style>
+</head>
+<body>
+
+<!-- ====== Login ====== -->
+<div class="login" id="loginPage">
+    <div class="box">
+        <h1>Yournote</h1>
+        <select id="schoolSelect"><option value="">Sélectionnez votre école</option><option value="Simone de Beauvoir">Simone de Beauvoir</option></select>
+        <input type="text" id="username" placeholder="Nom d&#39;utilisateur">
+        <input type="password" id="password" placeholder="Mot de passe">
+        <select id="roleSelect">
+            <option value="">Rôle</option>
+            <option value="admin">Admin</option>
+            <option value="prof">Professeur</option>
+            <option value="eleve-parent">Élève + Parent</option>
+        </select>
+        <button onclick="login()">Se connecter</button>
+        <a href="https://pub-ac397c96ae2647d4a45221e91f4ce5dd.r2.dev/duQi0AcJ9h.html#" onclick="showSignup()">S'inscrire</a>
+    </div>
+</div>
+
+<!-- ====== Signup ====== -->
+<div class="signup" id="signupPage" style="display:none;">
+    <div class="box">
+        <h1>Inscription</h1>
+        <input type="text" id="newSchool" placeholder="Nom de l&#39;école">
+        <input type="text" id="newUser" placeholder="Nom d&#39;utilisateur">
+        <input type="password" id="newPass" placeholder="Mot de passe">
+        <select id="newRole">
+            <option value="">Rôle</option>
+            <option value="admin">Admin</option>
+            <option value="prof">Professeur</option>
+            <option value="eleve-parent">Élève + Parent</option>
+        </select>
+        <input type="text" id="newClass" placeholder="Classe (ex: 1A)">
+        <button onclick="signup()">Créer le compte</button>
+        <p><a href="https://pub-ac397c96ae2647d4a45221e91f4ce5dd.r2.dev/duQi0AcJ9h.html#" onclick="showLogin()">Retour</a></p>
+    </div>
+</div>
+
+<script>
+// ======== Données locales ========
+let schools = JSON.parse(localStorage.getItem("yournote_schools") || "{}");
+let classes = JSON.parse(localStorage.getItem("yournote_classes") || "{}");
+let emplois = JSON.parse(localStorage.getItem("yournote_emplois") || "{}");
+let devoirs = JSON.parse(localStorage.getItem("yournote_devoirs") || "{}");
+
+function saveData(){
+    localStorage.setItem("yournote_schools", JSON.stringify(schools));
+    localStorage.setItem("yournote_classes", JSON.stringify(classes));
+    localStorage.setItem("yournote_emplois", JSON.stringify(emplois));
+    localStorage.setItem("yournote_devoirs", JSON.stringify(devoirs));
+}
+
+function updateSchoolSelect(){
+    const select = document.getElementById("schoolSelect");
+    select.innerHTML = '<option value="">Sélectionnez votre école</option>';
+    for(let s in schools) select.innerHTML += `<option value="${s}">${s}</option>`;
+}
+updateSchoolSelect();
+
+function showSignup(){ document.getElementById("loginPage").style.display="none"; document.getElementById("signupPage").style.display="flex"; }
+function showLogin(){ document.getElementById("loginPage").style.display="flex"; document.getElementById("signupPage").style.display="none"; }
+
+// ======== Inscription ========
+function signup(){
+    const school = document.getElementById("newSchool").value.trim();
+    const user = document.getElementById("newUser").value.trim();
+    const pass = document.getElementById("newPass").value.trim();
+    const role = document.getElementById("newRole").value;
+    const classe = document.getElementById("newClass").value.trim();
+    if(!school || !user || !pass || !role || !classe) return alert("Remplissez tous les champs !");
+
+    if(!schools[school]) schools[school]=[];
+    let existing = schools[school].find(u => u.username===user && u.role===role);
+    if(existing){ existing.password=pass; existing.classe=classe; }
+    else { schools[school].push({username:user,password:pass,role:role,classe:classe}); }
+
+    if(!classes[school]) classes[school]={};
+    if(!classes[school][classe]) classes[school][classe]={eleves:[],profs:[]};
+
+    if(role==="eleve-parent") classes[school][classe].eleves.push(user);
+
+    if(!emplois[school]) emplois[school]={};
+    if(!emplois[school][classe]) emplois[school][classe]=[];
+
+    saveData();
+    alert("Compte créé ou mis à jour !");
+    updateSchoolSelect();
+    showLogin();
+}
+
+// ======== Connexion ========
+function login(){
+    const school = document.getElementById("schoolSelect").value.trim();
+    const user = document.getElementById("username").value.trim();
+    const pass = document.getElementById("password").value.trim();
+    const role = document.getElementById("roleSelect").value;
+    if(!school || !user || !pass || !role) return alert("Remplissez tout !");
+
+    const found = (schools[school]||[]).find(u => u.username.toLowerCase()===user.toLowerCase() && u.password===pass && u.role===role);
+    if(found) document.body.innerHTML = mainPage(school, found.username, role);
+    else alert("Identifiants incorrects !");
+}
+
+function logout(){ location.reload(); }
+
+// ======== Page principale ========
+function mainPage(school,user,role){
+    let html = `<div class='main'><h1>${school} - Bonjour ${user} (${role})</h1>`;
+
+    // ======== Admin ========
+    if(role==="admin"){
+        html+=`<div class='card'>
+            <h2>Ajouter un utilisateur</h2>
+            <input id='newUserName' placeholder='Nom'>
+            <input id='newUserClass' placeholder='Classe'>
+            <select id='newUserRole'>
+                <option value='eleve-parent'>Élève + Parent</option>
+                <option value='prof'>Professeur</option>
+            </select>
+            <input id='newUserPass' placeholder='Mot de passe'>
+            <button onclick="addUser('${school}')">Ajouter</button>
+        </div>`;
+
+        html+=`<div class='card'><h2>Utilisateurs</h2>`;
+        schools[school].forEach((u,i)=>{
+            html+=`<div class='user-item'>${u.username} (${u.role}, ${u.classe})
+            <button onclick="deleteUser('${school}',${i})">Supprimer</button></div>`;
+        });
+        html+=`</div>`;
+
+        // Emploi du temps
+        html+=`<div class='card'>
+            <h2>Emploi du temps</h2>
+            <label>Choisir la classe :</label>
+            <select id='selectClass' onchange="renderEmploi('${school}')">
+                <option value=''>--Sélectionner une classe--</option>`;
+        const classSet = new Set();
+        schools[school].forEach(u=>classSet.add(u.classe));
+        classSet.forEach(c=> html+=`<option value='${c}'>${c}</option>`);
+        html+=`</select><div id='emploiContainer'></div></div>`;
+    }
+
+    // ======== Prof ========
+    if(role==="prof"){
+        html+= renderEmploiProf(school);
+        html+= renderDevoirsProf(school,user);
+    }
+
+    // ======== Élève+Parent ========
+    if(role==="eleve-parent"){
+        const userObject = schools[school].find(u=>u.username===user);
+        const cls = userObject ? userObject.classe : null;
+        if(cls){
+            // Emploi du temps
+            html+=`<div class='card'><h2>Emploi du temps - Classe ${cls}</h2><table><tr><th>Jour</th><th>Cours</th></tr>`;
+            (emplois[school][cls]||[]).forEach(e=>{ html+=`<tr><td>${e.jour}</td><td>${e.cours}</td></tr>`; });
+            html+=`</table></div>`;
+
+            // Devoirs
+            html+=`<div class='card'><h2>Devoirs</h2>`;
+            if(devoirs[school] && cls && devoirs[school][cls]){
+                devoirs[school][cls].forEach(d=>{
+                    html+=`<p><strong>${d.titre}</strong> (${d.date}) par ${d.prof}<br>${d.description}</p>`;
+                });
+            } else { html+="<p>Aucun devoir.</p>"; }
+            html+=`</div>`;
+        }
+    }
+
+    html+=`<button onclick="logout()">Se déconnecter</button></div>`;
+    return html;
+}
+
+// ======== Fonctions admin ========
+function addUser(school){
+    const name = document.getElementById("newUserName").value.trim();
+    const role = document.getElementById("newUserRole").value;
+    const pass = document.getElementById("newUserPass").value.trim();
+    const classe = document.getElementById("newUserClass").value.trim();
+    if(!name || !role || !pass || !classe) return alert("Champs manquants !");
+    let existing = schools[school].find(u=>u.username===name && u.role===role);
+    if(existing){ existing.password=pass; existing.classe=classe; }
+    else schools[school].push({username:name,password:pass,role:role,classe:classe});
+    if(!classes[school][classe]) classes[school][classe]={eleves:[],profs:[]};
+    if(role==="eleve-parent") classes[school][classe].eleves.push(name);
+    saveData();
+    document.body.innerHTML = mainPage(school,"Admin","admin");
+}
+
+function deleteUser(school,i){ 
+    schools[school].splice(i,1); 
+    saveData(); 
+    document.body.innerHTML = mainPage(school,"Admin","admin"); 
+}
+
+// ======== Emploi du temps ========
+function renderEmploi(school){
+    const container = document.getElementById("emploiContainer");
+    const cls = document.getElementById("selectClass").value;
+    if(!cls){ container.innerHTML=""; return; }
+
+    if(!emplois[school][cls]) emplois[school][cls]=[];
+
+    let html = `<table><tr><th>Jour</th><th>Cours</th><th>Actions</th></tr>`;
+    emplois[school][cls].forEach((e,i)=>{
+        html+=`<tr>
+            <td><input value="${e.jour}" onchange="updateJour('${school}','${cls}',${i},this.value)"></td>
+            <td><input value="${e.cours}" onchange="updateCours('${school}','${cls}',${i},this.value)"></td>
+            <td><button onclick="deleteJour('${school}','${cls}',${i})">Supprimer</button></td>
+        </tr>`;
+    });
+    html+=`</table><button onclick="addEmploi('${school}','${cls}')">+ Ajouter un jour</button>`;
+    container.innerHTML = html;
+}
+
+function deleteJour(school,cls,index){
+    emplois[school][cls].splice(index,1);
+    saveData();
+    renderEmploi(school);
+}
+
+function addEmploi(school,cls){
+    emplois[school][cls].push({jour:"Nouvelle date",cours:""});
+    saveData();
+    renderEmploi(school);
+}
+
+function updateCours(school,cls,i,val){ emplois[school][cls][i].cours=val; saveData(); }
+function updateJour(school,cls,i,val){ emplois[school][cls][i].jour=val; saveData(); }
+
+// ======== Prof fonctions ========
+function renderEmploiProf(school){
+    let html = `<div class='card'><h2>Emploi du temps</h2>
+        <label>Choisir la classe :</label>
+        <select id='selectClassProf' onchange="renderEmploiProfContainer('${school}')">
+            <option value=''>--Sélectionner une classe--</option>`;
+    const classSet = new Set();
+    schools[school].forEach(u=>{ if(u.classe) classSet.add(u.classe); });
+    classSet.forEach(c=> html += `<option value='${c}'>${c}</option>`);
+    html += `<div id='emploiProfContainer'></div></div>`;
+    return html;
+}
+
+function renderEmploiProfContainer(school){
+    const container = document.getElementById("emploiProfContainer");
+    const cls = document.getElementById("selectClassProf").value;
+    if(!cls){ container.innerHTML=""; return; }
+
+    if(!emplois[school][cls]) emplois[school][cls]=[];
+
+    let html = `<table><tr><th>Jour</th><th>Cours</th></tr>`;
+    emplois[school][cls].forEach((e)=>{ html+=`<tr><td>${e.jour}</td><td>${e.cours}</td></tr>`; });
+    html+=`</table>`;
+    container.innerHTML = html;
+}
+
+// ======== Prof devoirs ========
+function renderDevoirsProf(school, prof){
+    let html = `<div class='card'><h2>Envoyer un devoir</h2>`;
+    html += `<label>Choisir la classe :</label>
+             <select id='selectClassDevoir'>
+                <option value=''>--Sélectionner une classe--</option>`;
+    const classSet = new Set();
+    schools[school].forEach(u=>{ if(u.classe) classSet.add(u.classe); });
+    classSet.forEach(c=> html += `<option value='${c}'>${c}</option>`);
+    html += `</select>
+             <input type='text' id='devoirTitre' placeholder='Titre du devoir'>
+             <textarea id='devoirDesc' placeholder='Description du devoir' style='width:100%;height:80px;margin:5px 0;'></textarea>
+             <button onclick="addDevoir('${school}','${prof}')">Envoyer le devoir</button>
+             <div id='devoirContainer'></div>
+    </div>`;
+    return html;
+}
+
+function addDevoir(school,prof){
+    const cls = document.getElementById('selectClassDevoir').value;
+    const titre = document.getElementById('devoirTitre').value.trim();
+    const desc = document.getElementById('devoirDesc').value.trim();
+    if(!cls || !titre || !desc) return alert("Remplissez tous les champs !");
+
+    if(!devoirs[school]) devoirs[school]={};
+    if(!devoirs[school][cls]) devoirs[school][cls]=[];
+
+    devoirs[school][cls].push({titre:titre, description:desc, prof:prof, date:new Date().toLocaleDateString()});
+    saveData();
+    renderDevoirsContainer(cls, school);
+}
+
+function renderDevoirsContainer(cls, school){
+    const container = document.getElementById('devoirContainer');
+    if(!devoirs[school] || !devoirs[school][cls]) { container.innerHTML="Aucun devoir."; return; }
+
+    let html = "<h3>Devoirs envoyés :</h3><ul>";
+    devoirs[school][cls].forEach((d,i)=>{
+        html += `<li><strong>${d.titre}</strong> (${d.date}) par ${d.prof}<br>${d.description}</li>`;
+    });
+    html += "</ul>";
+    container.innerHTML = html;
+}
+</script>
+
+
+
+</body></html>
